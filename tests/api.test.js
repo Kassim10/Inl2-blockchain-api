@@ -35,6 +35,10 @@ describe("Blockchain API", () => {
         expect(response.body.message).toBe(
             "Transaction added to pending pool"
         );
+        expect(response.body.transaction.serialNumber).toBe(
+            "OMEGA-TEST-1001"
+        );
+        expect(response.body.transaction.toAddress).toBe("KASSIM");
     });
 
     it("POST /api/mine should mine pending transactions", async () => {
@@ -51,8 +55,9 @@ describe("Blockchain API", () => {
 
         expect(response.status).toBe(201);
         expect(response.body.message).toBe("Block mined successfully");
-        expect(response.body.block.hash).toBeDefined();
-        expect(response.body.block.nonce).toBeDefined();
+        expect(response.body.block).toHaveProperty("hash");
+        expect(response.body.block).toHaveProperty("nonce");
+        expect(response.body.block.data).toHaveLength(1);
     });
 
     it("GET /api/verify/:id should return product history", async () => {
@@ -98,7 +103,10 @@ describe("Blockchain API", () => {
                 timestamp: Date.now(),
             });
 
-        expect(response.status).toBeGreaterThanOrEqual(400);
+        expect(response.status).toBe(422);
+        expect(response.body.error.message).toContain(
+            "Invalid ownership transfer"
+        );
     });
 
     it("GET /api/verify/:id should return 404 for an unknown product", async () => {
@@ -107,5 +115,36 @@ describe("Blockchain API", () => {
         );
 
         expect(response.status).toBe(404);
+        expect(response.body.error.message).toBe("Product not found");
+    });
+
+    it("should return 400 for an incomplete transaction", async () => {
+        const response = await request(app)
+            .post("/api/transactions")
+            .send({
+                serialNumber: "INVALID-1",
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.message).toBe(
+            "Transaction is missing required fields"
+        );
+    });
+
+    it("should return 400 when mining with no pending transactions", async () => {
+        const response = await request(app).post("/api/mine");
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.message).toBe(
+            "No pending transactions to mine"
+        );
+    });
+
+    it("should return 404 for an unknown route", async () => {
+        const response = await request(app).get("/api/unknown");
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.status).toBe(404);
+        expect(response.body.error.message).toContain("Route not found");
     });
 });

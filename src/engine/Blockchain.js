@@ -54,30 +54,45 @@ export class Blockchain {
         } = transaction;
 
         if (!serialNumber || !fromAddress || !toAddress || !timestamp) {
-            throw new Error("Transaction is missing required fields");
+            const error = new Error(
+                "Transaction is missing required fields"
+            );
+
+            error.statusCode = 400;
+            throw error;
         }
 
         const currentOwner = this.getCurrentOwner(serialNumber);
 
         if (currentOwner && currentOwner !== fromAddress) {
-            throw new Error(
+            const error = new Error(
                 `Invalid ownership transfer. Current owner is ${currentOwner}`
             );
+
+            error.statusCode = 422;
+            throw error;
         }
 
-        this.pendingTransactions.push({
+        const cleanTransaction = {
             serialNumber,
             fromAddress,
             toAddress,
             timestamp,
-        });
+        };
 
-        return transaction;
+        this.pendingTransactions.push(cleanTransaction);
+
+        return cleanTransaction;
     }
 
     minePendingTransactions() {
         if (this.pendingTransactions.length === 0) {
-            throw new Error("No pending transactions to mine");
+            const error = new Error(
+                "No pending transactions to mine"
+            );
+
+            error.statusCode = 400;
+            throw error;
         }
 
         const newBlock = new Block(
@@ -106,12 +121,14 @@ export class Blockchain {
             }
         }
 
+        const currentOwner =
+            history.length > 0
+                ? history[history.length - 1].toAddress
+                : null;
+
         return {
             serialNumber,
-            currentOwner:
-                history.length > 0
-                    ? history[history.length - 1].toAddress
-                    : null,
+            currentOwner,
             history,
         };
     }
