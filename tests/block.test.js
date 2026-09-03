@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Block } from "../src/engine/Block.js";
+import { stableStringify } from "../src/utils/stableStringify.js";
 
 describe("Block", () => {
     it("should create a block with a valid SHA-256 hash", () => {
@@ -55,4 +56,52 @@ describe("Block", () => {
 
         expect(newHash).not.toBe(originalHash);
     });
+});
+
+it("should produce stable serialization regardless of object key order", () => {
+    const firstObject = {
+        serialNumber: "ROLEX-SUB-9981",
+        fromAddress: "ROLEX",
+        toAddress: "KASSIM",
+    };
+
+    const secondObject = {
+        toAddress: "KASSIM",
+        serialNumber: "ROLEX-SUB-9981",
+        fromAddress: "ROLEX",
+    };
+
+    expect(stableStringify(firstObject)).toBe(
+        stableStringify(secondObject)
+    );
+});
+
+it("should produce the same hash when data has the same values in different key order", () => {
+    const firstBlock = new Block(
+        1,
+        1772188800000,
+        [
+            {
+                serialNumber: "ROLEX-SUB-9981",
+                fromAddress: "ROLEX",
+                toAddress: "KASSIM",
+            },
+        ],
+        "previous-hash"
+    );
+
+    const secondBlock = new Block(
+        1,
+        1772188800000,
+        [
+            {
+                toAddress: "KASSIM",
+                fromAddress: "ROLEX",
+                serialNumber: "ROLEX-SUB-9981",
+            },
+        ],
+        "previous-hash"
+    );
+
+    expect(firstBlock.hash).toBe(secondBlock.hash);
 });
